@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>hadigo — sırayı bul, 100'e ulaş</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --board-bg: #16281f;
+    --board-frame: #3c2a1c;
+    --chalk: #f2ede1;
+    --chalk-dim: #b9c4b9;
+    --accent: #e8c468;
+    --filled: #33604d;
+    --filled-line: #4f8a70;
+    --current: #e8c468;
+    --error: #c1584f;
+    --hint: #6fae9c;
+    --panel: #0f1e17;
+    --timer: #d9825a;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0;
+    background: #0b1712;
+    color: var(--chalk);
+    font-family: 'Space Mono', monospace;
+    min-height:100vh;
+  }
+  .wrap{
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 18px 14px 90px;
+  }
+  h1{
+    font-family: 'Caveat', cursive;
+    font-size: clamp(2.4rem, 9vw, 3.2rem);
+    text-align:center;
+    color: var(--chalk);
+    margin: 6px 0 2px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 8px rgba(242,237,225,0.25);
+    text-transform: lowercase;
+  }
+  .subtitle{
+    text-align:center;
+    color: var(--chalk-dim);
+    font-size: 0.75rem;
+    margin-bottom: 14px;
+    letter-spacing: 0.5px;
+  }
+  .mode-badge{
+    text-align:center;
+    font-size: 0.7rem;
+    color: var(--accent);
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .progress{
+    font-family:'Space Mono', monospace;
+    font-weight:700;
+    font-size: 1rem;
+    background: var(--panel);
+    border: 1px solid #2a4437;
+    padding: 8px 14px;
+    border-radius: 8px;
+    color: var(--accent);
+  }
+  .timerbox{
+    font-family:'Space Mono', monospace;
+    font-weight:700;
+    font-size: 1rem;
+    background: var(--panel);
+    border: 1px solid #6b3a2a;
+    padding: 8px 14px;
+    border-radius: 8px;
+    color: var(--timer);
+    display:none;
+  }
+  .timerbox.warn{
+    color: #ff6b5e;
+    border-color: #ff6b5e;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ opacity:1; } 50%{ opacity:0.55; }
+  }
+  .btn{
+    font-family:'Space Mono', monospace;
+    font-size: 0.75rem;
+    background: var(--panel);
+    color: var(--chalk);
+    border: 1px solid #2a4437;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor:pointer;
+    transition: transform .1s ease, background .2s ease;
+  }
+  .btn:active{ transform: scale(0.96); }
+  .btn:hover{ background: #16311f; }
+  .btn.accent{ border-color: var(--accent); color: var(--accent); }
+  .btn.timer-accent{ border-color: var(--timer); color: var(--timer); }
+  .btn.wide{ flex:1; min-width: 120px; }
+  .btn.big{ font-size: 0.95rem; padding: 14px 18px; }
+  .btn.icon{ padding: 8px 10px; font-size: 1rem; }
+  .controls{
+    display:flex;
+    gap:8px;
+    margin: 12px 0;
+    flex-wrap: wrap;
+  }
+  .board-frame{
+    background: var(--board-frame);
+    padding: 10px;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45), inset 0 0 0 2px #55402c;
+  }
+  #board{
+    display:grid;
+    gap: 3px;
+    aspect-ratio: 1 / 1;
+    background: var(--board-bg);
+    border-radius: 8px;
+    padding: 4px;
+  }
+  .cell{
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(242,237,225,0.08);
+    border-radius: 4px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size: clamp(0.55rem, 2.6vw, 0.95rem);
+    font-weight: 700;
+    color: var(--chalk-dim);
+    cursor: pointer;
+    user-select:none;
+    position:relative;
+    transition: background .15s ease, transform .1s ease;
+  }
+  .cell:active{ transform: scale(0.92); }
+  .cell.filled{
+    background: var(--filled);
+    border-color: var(--filled-line);
+    color: var(--chalk);
+  }
+  .cell.current{
+    background: var(--current);
+    color: #1b1204;
+    box-shadow: 0 0 10px 2px rgba(232,196,104,0.6);
+  }
+  .cell.hint{
+    box-shadow: inset 0 0 0 2px var(--hint);
+  }
+  .cell.error{
+    background: var(--error) !important;
+    color: #fff !important;
+    animation: shake .5s ease;
+  }
+  @keyframes shake{
+    0%,100%{ transform: translateX(0); }
+    20%{ transform: translateX(-4px); }
+    40%{ transform: translateX(4px); }
+    60%{ transform: translateX(-3px); }
+    80%{ transform: translateX(3px); }
+  }
+  .rules{
+    margin-top: 16px;
+    background: var(--panel);
+    border: 1px solid #2a4437;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 0.72rem;
+    line-height: 1.6;
+    color: var(--chalk-dim);
+  }
+  .rules b{ color: var(--chalk); }
+  .adbox{
+    margin-top: 16px;
+    border: 1px dashed #3a5747;
+    border-radius: 10px;
+    padding: 14px;
+    text-align:center;
+    font-size: 0.7rem;
+    color: #6b8577;
+    letter-spacing: 0.5px;
+  }
+  .modal-bg{
+    position:fixed; inset:0;
+    background: rgba(0,0,0,0.65);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding: 20px;
+    z-index: 120;
+  }
+  .modal-bg.show{ display:flex; }
+  .modal{
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    padding: 22px;
+    max-width: 380px;
+    width:100%;
+    text-align:center;
+    max-height: 85vh;
+    overflow-y:auto;
+  }
+  .modal h2{
+    font-family:'Caveat', cursive;
+    font-size: 2rem;
+    margin: 0 0 6px;
+    color: var(--accent);
+    text-transform: lowercase;
+  }
+  .modal p{ font-size: 0.85rem; color: var(--chalk-dim); margin: 6px 0 16px; }
+  .modal .score{ font-size: 2.4rem; font-weight:700; color: var(--chalk); margin: 8px 0; }
+  .share-row{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:10px;
+  }
+  .size-choice-row, .time-choice-row{
+    display:flex; flex-direction:column; gap:10px; margin-top: 16px;
+  }
+  .size-choice-row .btn, .time-choice-row.horizontal{
+    text-align:left;
+  }
+  .time-choice-row.horizontal{
+    flex-direction:row; justify-content:center; flex-wrap:wrap;
+  }
+  .size-opt{
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .size-opt .tag{ font-size:0.65rem; color:var(--chalk-dim); }
+  .history-item{
+    display:flex; justify-content:space-between; align-items:center;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #2a4437;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 0.75rem;
+    text-align:left;
+    cursor:pointer;
+  }
+  .history-item .badge{
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--filled);
+  }
+  .history-item .badge.win{ background: var(--accent); color:#1b1204; }
+  .history-item .mode-tag{
+    font-size: 0.6rem;
+    color: var(--timer);
+    margin-top: 2px;
+  }
+  .mini-board{
+    display:grid;
+    gap:1px;
+    background:#0b1712;
+    border-radius:6px;
+    padding:3px;
+    margin-top:10px;
+  }
+  .mini-cell{
+    aspect-ratio:1;
+    background: rgba(255,255,255,0.05);
+    border-radius:1px;
+  }
+  .mini-cell.filled{ background: var(--filled); }
+  .empty-hist{ text-align:center; color:var(--chalk-dim); font-size:0.8rem; padding: 20px 0; }
+  .adwatch-spinner{
+    width:36px; height:36px;
+    border: 3px solid #2a4437;
+    border-top-color: var(--accent);
+    border-radius:50%;
+    margin: 10px auto;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+  .close-x{
+    position:absolute; top:10px; right:14px;
+    background:none; border:none; color:var(--chalk-dim);
+    font-size:1.2rem; cursor:pointer;
+  }
+
+  #homeScreen{
+    position:fixed; inset:0;
+    background: radial-gradient(circle at 50% 20%, #1c3527, #0b1712 75%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    z-index: 80;
+    padding: 24px 18px;
+    text-align:center;
+    overflow-y:auto;
+  }
+  #homeScreen.hide{ display:none; }
+  .home-top-icons{
+    position:absolute; top:16px; right:16px;
+    display:flex; gap:8px;
+  }
+  .home-logo{
+    font-family:'Caveat', cursive;
+    font-size: clamp(3rem, 14vw, 4.5rem);
+    color: var(--accent);
+    text-shadow: 0 0 16px rgba(232,196,104,0.35);
+    text-transform: lowercase;
+    margin: 0;
+  }
+  .home-tagline{
+    color: var(--chalk-dim);
+    font-size: 0.85rem;
+    margin-bottom: 22px;
+  }
+  .home-stats{
+    display:flex;
+    gap: 14px;
+    margin-bottom: 26px;
+  }
+  .home-stat{
+    background: var(--panel);
+    border: 1px solid #2a4437;
+    border-radius: 10px;
+    padding: 10px 18px;
+    min-width: 100px;
+  }
+  .home-stat .num{
+    font-size: 1.4rem;
+    font-weight:700;
+    color: var(--chalk);
+  }
+  .home-stat .lbl{
+    font-size: 0.62rem;
+    color: var(--chalk-dim);
+    letter-spacing: 0.5px;
+    margin-top:2px;
+  }
+  .home-buttons{
+    display:flex; flex-direction:column; gap:10px;
+    width:100%; max-width: 320px;
+  }
+  .home-buttons .btn{
+    padding: 15px 18px;
+    font-size: 0.95rem;
+  }
+
+  .settings-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 12px 4px;
+    border-bottom: 1px solid #223a2c;
+    font-size: 0.82rem;
+    text-align:left;
+  }
+  .toggle{
+    width: 46px; height: 26px;
+    border-radius: 20px;
+    background: #2a4437;
+    position:relative;
+    cursor:pointer;
+    border: 1px solid #3d5a49;
+    flex-shrink:0;
+  }
+  .toggle.on{ background: var(--accent); border-color: var(--accent); }
+  .toggle .knob{
+    position:absolute; top:2px; left:2px;
+    width:20px; height:20px;
+    border-radius:50%;
+    background: var(--chalk);
+    transition: left .15s ease;
+  }
+  .toggle.on .knob{ left: 22px; background:#1b1204; }
+  .premium-box{
+    margin-top: 14px;
+    background: rgba(232,196,104,0.08);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 14px;
+    text-align:left;
+  }
+  .premium-box .price{
+    font-size: 1.3rem; font-weight:700; color: var(--accent); margin: 6px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ ANA SAYFA ============ -->
+<div id="homeScreen">
+  <div class="home-top-icons">
+    <button class="btn icon" id="homeSettingsBtn">⚙️</button>
+    <button class="btn icon" id="homeHistoryBtn">📜</button>
+  </div>
+  <h1 class="home-logo">hadigo</h1>
+  <div class="home-tagline">sırayı bul, tahtayı doldur</div>
+
+  <div class="home-stats">
+    <div class="home-stat">
+      <div class="num" id="bestScoreLabel">0</div>
+      <div class="lbl" id="bestScoreSizeLbl">en iyi skor</div>
+    </div>
+    <div class="home-stat">
+      <div class="num" id="streakLabel">🔥 0</div>
+      <div class="lbl">gün serisi</div>
+    </div>
+  </div>
+
+  <div class="home-buttons">
+    <button class="btn big accent" id="homeClassicBtn">🎯 klasik oyna</button>
+    <button class="btn big timer-accent" id="homeAdventureBtn">⏱ macera oyna</button>
+  </div>
+
+  <div class="adbox" id="homeAdBanner" style="margin-top:26px; max-width:320px;">
+    reklam alanı — buraya google adsense banner kodu eklenecek
+  </div>
+</div>
+
+<!-- ============ TAHTA BOYUTU SEÇİM MODAL ============ -->
+<div class="modal-bg" id="sizeModalBg">
+  <div class="modal">
+    <h2>tahtanı seç</h2>
+    <p>ne kadar sürede oynamak istersin?</p>
+    <div class="size-choice-row">
+      <button class="btn big accent size-opt" data-size="5">
+        <span>⚡ hızlı</span><span class="tag">5×5 · 25 kare</span>
+      </button>
+      <button class="btn big accent size-opt" data-size="7">
+        <span>🎯 orta</span><span class="tag">7×7 · 49 kare</span>
+      </button>
+      <button class="btn big accent size-opt" data-size="10">
+        <span>🏆 klasik</span><span class="tag">10×10 · 100 kare</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ OYUN EKRANI ============ -->
+<div class="wrap" id="gameScreen" style="display:none;">
+  <h1>hadigo</h1>
+  <div class="subtitle">sırayı bul, tahtayı doldur</div>
+  <div class="mode-badge" id="modeBadge"></div>
+
+  <div class="topbar">
+    <button class="btn icon" id="homeBtn">🏠</button>
+    <div class="progress" id="progressLabel">0 / 100</div>
+    <div class="timerbox" id="timerBox">03:00</div>
+    <button class="btn accent" id="hintToggle">ipuçları: kapalı</button>
+  </div>
+
+  <div class="board-frame">
+    <div id="board"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn wide" id="undoBtn">↺ geri al</button>
+    <button class="btn wide timer-accent" id="addTimeBtn" style="display:none;">⏱ +30sn</button>
+    <button class="btn wide" id="newGameBtn">yeniden başla</button>
+    <button class="btn wide" id="changeModeBtn">mod / tahta değiştir</button>
+  </div>
+
+  <div class="rules">
+    <b>kurallar:</b><br>
+    • yatay veya dikey yerleştirmede aradan <b>2 kare atlanır</b> (3 kare mesafe).<br>
+    • çapraz yerleştirmede aradan <b>1 kare atlanır</b> (2 kare mesafe).<br>
+    • kurala uymayan kareye tıklarsan kare kısaca <b>kırmızı</b> yanar, sayı yazılmaz.<br>
+    • sıradaki geçerli hiçbir kare kalmazsa oyun biter; ulaştığın son sayı <b>skorun</b> olur.<br>
+    • <b>macera modu:</b> süre dolmadan sona ulaşmaya çalış!
+  </div>
+
+  <div class="adbox" id="adBanner">
+    reklam alanı — buraya google adsense banner kodu eklenecek
+  </div>
+</div>
+
+<!-- MACERA SÜRE SEÇİM MODAL -->
+<div class="modal-bg" id="timeModalBg">
+  <div class="modal">
+    <h2>süreni seç</h2>
+    <p>kaç dakikada tamamlayacaksın?</p>
+    <div class="time-choice-row horizontal">
+      <button class="btn timer-accent" data-min="5">5 dk</button>
+      <button class="btn timer-accent" data-min="3">3 dk</button>
+      <button class="btn timer-accent" data-min="2">2 dk</button>
+    </div>
+  </div>
+</div>
+
+<!-- AYARLAR MODAL -->
+<div class="modal-bg" id="settingsModalBg">
+  <div class="modal" style="position:relative; text-align:left;">
+    <button class="close-x" id="closeSettingsModal">✕</button>
+    <h2 style="text-align:center;">ayarlar</h2>
+
+    <div class="settings-row">
+      <span>🔊 ses efektleri</span>
+      <div class="toggle" id="soundToggle"><div class="knob"></div></div>
+    </div>
+    <div class="settings-row" style="border-bottom:none;">
+      <span>📳 titreşim</span>
+      <div class="toggle" id="vibrationToggle"><div class="knob"></div></div>
+    </div>
+
+    <div class="premium-box" id="premiumBox">
+      <div><b>reklamları kaldır</b></div>
+      <div class="price">₺49,99 <span style="font-size:0.7rem; color:var(--chalk-dim);">/ tek seferlik</span></div>
+      <p style="margin:6px 0 10px;">tüm reklamları kaldırır, geri al ve süre ekleme özelliklerini anında ve ücretsiz kullanırsın.</p>
+      <button class="btn accent wide" id="buyPremiumBtn">satın al</button>
+    </div>
+  </div>
+</div>
+
+<!-- OYUN SONU MODAL -->
+<div class="modal-bg" id="endModalBg">
+  <div class="modal" style="position:relative;">
+    <button class="close-x" id="closeEndModal">✕</button>
+    <h2 id="endTitle">oyun bitti</h2>
+    <p id="endSubtitle">daha fazla ilerleyemedin.</p>
+    <div class="score" id="endScore">0</div>
+    <p id="endScoreLabel">skorun bu oldu</p>
+    <div class="share-row" id="shareRow"></div>
+    <div style="margin-top:16px; display:flex; gap:8px;">
+      <button class="btn wide" id="endHomeBtn">ana sayfa</button>
+      <button class="btn accent wide" id="playAgainBtn">tekrar oyna</button>
+    </div>
+  </div>
+</div>
+
+<!-- REKLAM İZLEME MODAL -->
+<div class="modal-bg" id="adModalBg">
+  <div class="modal">
+    <h2 id="adModalTitle">reklam izleniyor</h2>
+    <div class="adwatch-spinner"></div>
+    <p id="adModalText">geri alma hakkın birazdan açılacak...</p>
+  </div>
+</div>
+
+<!-- GEÇMİŞ OYUNLAR MODAL -->
+<div class="modal-bg" id="historyModalBg">
+  <div class="modal" style="position:relative; text-align:left;">
+    <button class="close-x" id="closeHistoryModal">✕</button>
+    <h2 style="text-align:center;">geçmiş oyunlar</h2>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<!-- GEÇMİŞ OYUN DETAY MODAL -->
+<div class="modal-bg" id="detailModalBg">
+  <div class="modal" style="position:relative;">
+    <button class="close-x" id="closeDetailModal">✕</button>
+    <h2 id="detailTitle">oyun</h2>
+    <p id="detailInfo"></p>
+    <div class="mini-board" id="detailBoard"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ============ AYARLAR (SETTINGS) ============
+  const SETTINGS_KEY = 'hadigoSettings';
+  function loadSettings(){
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      return raw ? Object.assign({ sound: true, vibration: true, premium: false }, JSON.parse(raw)) : { sound: true, vibration: true, premium: false };
+    } catch(e){ return { sound: true, vibration: true, premium: false }; }
+  }
+  function saveSettings(){
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e){}
+  }
+  let settings = loadSettings();
+
+  // ============ SES EFEKTLERİ ============
+  let audioCtx = null;
+  function getAudioCtx(){
+    if (!audioCtx){
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch(e){ return null; }
+    }
+    return audioCtx;
+  }
+  function playTone(freq, duration, type, delay){
+    if (!settings.sound) return;
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const t0 = ctx.currentTime + (delay || 0);
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.18, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.02);
+  }
+  function soundPlace(){ playTone(520, 0.09, 'sine'); }
+  function soundError(){ playTone(140, 0.18, 'sawtooth'); }
+  function soundWin(){
+    [523, 659, 784, 1047].forEach((f, i) => playTone(f, 0.22, 'triangle', i * 0.12));
+  }
+  function soundWin100(){
+    // 100'e ulaşmaya özel, daha uzun ve görkemli bir fanfar
+    [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => playTone(f, 0.3, 'triangle', i * 0.1));
+    setTimeout(() => [784, 1047, 1319, 1568].forEach((f, i) => playTone(f, 0.35, 'sine', i * 0.09)), 550);
+  }
+  function soundLose(){
+    [400, 300, 220].forEach((f, i) => playTone(f, 0.25, 'sine', i * 0.14));
+  }
+  function soundClick(){ playTone(700, 0.05, 'square'); }
+
+  function vibrate(pattern){
+    if (!settings.vibration) return;
+    if (navigator.vibrate) navigator.vibrate(pattern);
+  }
+
+  // ============ DURUM (STATE) ============
+  let SIZE = 10;
+  let TOTAL = SIZE * SIZE;
+  let cellValue = [];
+  let positions = [];
+  let currentNumber = 0;
+  let gameOver = false;
+  let hintMode = false;
+
+  let gameMode = 'classic';
+  let timeLimitSec = 0;
+  let timeLeftSec = 0;
+  let timerInterval = null;
+  let pendingMode = 'classic'; // boyut seçilmeden önce hangi moda gidileceği
+
+  const homeScreen = document.getElementById('homeScreen');
+  const gameScreen = document.getElementById('gameScreen');
+  const bestScoreLabel = document.getElementById('bestScoreLabel');
+  const bestScoreSizeLbl = document.getElementById('bestScoreSizeLbl');
+  const streakLabel = document.getElementById('streakLabel');
+  const homeClassicBtn = document.getElementById('homeClassicBtn');
+  const homeAdventureBtn = document.getElementById('homeAdventureBtn');
+  const homeSettingsBtn = document.getElementById('homeSettingsBtn');
+  const homeHistoryBtn = document.getElementById('homeHistoryBtn');
+  const homeAdBanner = document.getElementById('homeAdBanner');
+  const homeBtn = document.getElementById('homeBtn');
+  const endHomeBtn = document.getElementById('endHomeBtn');
+
+  const sizeModalBg = document.getElementById('sizeModalBg');
+  const boardEl = document.getElementById('board');
+  const progressLabel = document.getElementById('progressLabel');
+  const timerBox = document.getElementById('timerBox');
+  const modeBadge = document.getElementById('modeBadge');
+  const hintToggleBtn = document.getElementById('hintToggle');
+  const undoBtn = document.getElementById('undoBtn');
+  const addTimeBtn = document.getElementById('addTimeBtn');
+  const newGameBtn = document.getElementById('newGameBtn');
+  const changeModeBtn = document.getElementById('changeModeBtn');
+  const adBanner = document.getElementById('adBanner');
+
+  const timeModalBg = document.getElementById('timeModalBg');
+
+  const settingsModalBg = document.getElementById('settingsModalBg');
+  const closeSettingsModal = document.getElementById('closeSettingsModal');
+  const soundToggle = document.getElementById('soundToggle');
+  const vibrationToggle = document.getElementById('vibrationToggle');
+  const premiumBox = document.getElementById('premiumBox');
+  const buyPremiumBtn = document.getElementById('buyPremiumBtn');
+
+  const endModalBg = document.getElementById('endModalBg');
+  const endTitle = document.getElementById('endTitle');
+  const endSubtitle = document.getElementById('endSubtitle');
+  const endScore = document.getElementById('endScore');
+  const endScoreLabel = document.getElementById('endScoreLabel');
+  const shareRow = document.getElementById('shareRow');
+  const closeEndModal = document.getElementById('closeEndModal');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+
+  const adModalBg = document.getElementById('adModalBg');
+  const adModalTitle = document.getElementById('adModalTitle');
+  const adModalText = document.getElementById('adModalText');
+
+  const historyModalBg = document.getElementById('historyModalBg');
+  const historyList = document.getElementById('historyList');
+  const closeHistoryModal = document.getElementById('closeHistoryModal');
+
+  const detailModalBg = document.getElementById('detailModalBg');
+  const detailTitle = document.getElementById('detailTitle');
+  const detailInfo = document.getElementById('detailInfo');
+  const detailBoard = document.getElementById('detailBoard');
+  const closeDetailModal = document.getElementById('closeDetailModal');
+
+  const SIZE_LABELS = { 5: 'hızlı (5×5)', 7: 'orta (7×7)', 10: 'klasik (10×10)' };
+
+  // ============ IZGARA YARDIMCILARI ============
+  function idxToRC(idx){ return [Math.floor(idx / SIZE), idx % SIZE]; }
+  function rcToIdx(r, c){ return r * SIZE + c; }
+
+  const MOVE_DELTAS = [
+    [0, 3], [0, -3],
+    [3, 0], [-3, 0],
+    [2, 2], [2, -2], [-2, 2], [-2, -2]
+  ];
+
+  function validMovesFrom(idx){
+    const [r, c] = idxToRC(idx);
+    const out = [];
+    for (const [dr, dc] of MOVE_DELTAS){
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE){
+        const nidx = rcToIdx(nr, nc);
+        if (cellValue[nidx] === null) out.push(nidx);
+      }
+    }
+    return out;
+  }
+
+  function isValidClick(idx){
+    if (cellValue[idx] !== null) return false;
+    if (currentNumber === 0) return true;
+    return validMovesFrom(positions[currentNumber]).includes(idx);
+  }
+
+  // ============ IZGARA ÇİZİMİ ============
+  function buildBoard(){
+    boardEl.style.gridTemplateColumns = 'repeat(' + SIZE + ', 1fr)';
+    boardEl.style.gridTemplateRows = 'repeat(' + SIZE + ', 1fr)';
+    boardEl.innerHTML = '';
+    for (let i = 0; i < TOTAL; i++){
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.idx = i;
+      cell.addEventListener('click', () => handleCellClick(i));
+      boardEl.appendChild(cell);
+    }
+  }
+
+  function renderAll(){
+    const cells = boardEl.children;
+    let hints = [];
+    if (hintMode && !gameOver){
+      hints = currentNumber === 0
+        ? Array.from({length: TOTAL}, (_, i) => i)
+        : validMovesFrom(positions[currentNumber]);
+    }
+    for (let i = 0; i < TOTAL; i++){
+      const cell = cells[i];
+      cell.classList.remove('filled', 'current', 'hint', 'error');
+      const val = cellValue[i];
+      if (val !== null){
+        cell.textContent = val;
+        cell.classList.add('filled');
+        if (val === currentNumber) cell.classList.add('current');
+      } else {
+        cell.textContent = '';
+        if (hints.includes(i)) cell.classList.add('hint');
+      }
+    }
+    progressLabel.textContent = currentNumber + ' / ' + TOTAL;
+  }
+
+  function flashError(idx){
+    const cell = boardEl.children[idx];
+    cell.classList.add('error');
+    setTimeout(() => cell.classList.remove('error'), 500);
+  }
+
+  // ============ ZAMANLAYICI ============
+  function formatTime(sec){
+    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+    const s = (sec % 60).toString().padStart(2, '0');
+    return m + ':' + s;
+  }
+
+  function startTimer(){
+    stopTimer();
+    timerBox.style.display = 'block';
+    addTimeBtn.style.display = 'inline-block';
+    timerBox.textContent = formatTime(timeLeftSec);
+    timerBox.classList.remove('warn');
+    timerInterval = setInterval(() => {
+      timeLeftSec--;
+      timerBox.textContent = formatTime(Math.max(timeLeftSec, 0));
+      if (timeLeftSec <= 20) timerBox.classList.add('warn');
+      if (timeLeftSec <= 0){
+        stopTimer();
+        if (!gameOver) endGame(false, 'time');
+      }
+    }, 1000);
+  }
+
+  function stopTimer(){
+    if (timerInterval){ clearInterval(timerInterval); timerInterval = null; }
+  }
+
+  // ============ OYUN AKIŞI ============
+  function handleCellClick(idx){
+    if (gameOver) return;
+    if (!isValidClick(idx)){
+      flashError(idx);
+      soundError();
+      vibrate(120);
+      return;
+    }
+    currentNumber++;
+    cellValue[idx] = currentNumber;
+    positions[currentNumber] = idx;
+    renderAll();
+    soundPlace();
+    checkGameState();
+  }
+
+  function checkGameState(){
+    if (currentNumber === TOTAL){
+      endGame(true, 'complete');
+      return;
+    }
+    const moves = validMovesFrom(positions[currentNumber]);
+    if (moves.length === 0){
+      endGame(false, 'stuck');
+    }
+  }
+
+  function endGame(won, reason){
+    gameOver = true;
+    stopTimer();
+    const score = currentNumber;
+    const timeUsed = gameMode === 'adventure' ? (timeLimitSec - Math.max(timeLeftSec, 0)) : null;
+    if (won){ (SIZE === 10 ? soundWin100() : soundWin()); vibrate([80, 60, 80, 60, 200]); }
+    else { soundLose(); vibrate(200); }
+    saveHistory(score, won, reason, timeUsed);
+    updateBestScore(score);
+    updateStreak();
+    showEndModal(won, score, reason, timeUsed);
+  }
+
+  function resetGame(){
+    TOTAL = SIZE * SIZE;
+    cellValue = new Array(TOTAL).fill(null);
+    positions = new Array(TOTAL + 1).fill(null);
+    currentNumber = 0;
+    gameOver = false;
+    buildBoard();
+    if (gameMode === 'adventure'){
+      timeLeftSec = timeLimitSec;
+      startTimer();
+    } else {
+      stopTimer();
+      timerBox.style.display = 'none';
+      addTimeBtn.style.display = 'none';
+    }
+    renderAll();
+  }
+
+  function updateModeBadge(){
+    modeBadge.textContent = (gameMode === 'adventure'
+      ? '⏱ macera modu — ' + Math.round(timeLimitSec / 60) + ' dakika'
+      : '🎯 klasik mod') + ' · ' + SIZE_LABELS[SIZE];
+  }
+
+  function showGameScreen(){
+    homeScreen.classList.add('hide');
+    gameScreen.style.display = 'block';
+  }
+  function showHomeScreen(){
+    stopTimer();
+    homeScreen.classList.remove('hide');
+    gameScreen.style.display = 'none';
+    refreshHomeStats();
+  }
+
+  // ============ ANA SAYFA + BOYUT SEÇİMİ ============
+  homeClassicBtn.addEventListener('click', () => {
+    soundClick();
+    pendingMode = 'classic';
+    sizeModalBg.classList.add('show');
+  });
+
+  homeAdventureBtn.addEventListener('click', () => {
+    soundClick();
+    pendingMode = 'adventure';
+    sizeModalBg.classList.add('show');
+  });
+
+  sizeModalBg.querySelectorAll('[data-size]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      SIZE = parseInt(btn.dataset.size, 10);
+      sizeModalBg.classList.remove('show');
+      if (pendingMode === 'adventure'){
+        timeModalBg.classList.add('show');
+      } else {
+        gameMode = 'classic';
+        updateModeBadge();
+        showGameScreen();
+        resetGame();
+      }
+    });
+  });
+
+  timeModalBg.querySelectorAll('[data-min]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const minutes = parseInt(btn.dataset.min, 10);
+      timeLimitSec = minutes * 60;
+      gameMode = 'adventure';
+      timeModalBg.classList.remove('show');
+      updateModeBadge();
+      showGameScreen();
+      resetGame();
+    });
+  });
+
+  homeBtn.addEventListener('click', () => {
+    if (currentNumber > 0 && !gameOver){
+      if (!confirm('mevcut oyun kaybolacak. ana sayfaya dönmek istiyor musun?')) return;
+    }
+    showHomeScreen();
+  });
+
+  endHomeBtn.addEventListener('click', () => {
+    endModalBg.classList.remove('show');
+    showHomeScreen();
+  });
+
+  changeModeBtn.addEventListener('click', () => {
+    if (currentNumber > 0 && !gameOver){
+      if (!confirm('mevcut oyun kaybolacak. mod/tahta değiştirmek istiyor musun?')) return;
+    }
+    showHomeScreen();
+  });
+
+  // ============ EN İYİ SKOR VE GÜN SERİSİ ============
+  const STATS_KEY = 'hadigoStats';
+  function loadStats(){
+    try {
+      const raw = localStorage.getItem(STATS_KEY);
+      const defaults = { bestScores: {}, streak: 0, lastPlayedDate: null, lastSize: 10 };
+      return raw ? Object.assign(defaults, JSON.parse(raw)) : defaults;
+    } catch(e){ return { bestScores: {}, streak: 0, lastPlayedDate: null, lastSize: 10 }; }
+  }
+  function saveStats(stats){
+    try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){}
+  }
+  function updateBestScore(score){
+    const stats = loadStats();
+    if (!stats.bestScores) stats.bestScores = {};
+    const key = String(SIZE);
+    if (!stats.bestScores[key] || score > stats.bestScores[key]) stats.bestScores[key] = score;
+    stats.lastSize = SIZE;
+    saveStats(stats);
+  }
+  function updateStreak(){
+    const stats = loadStats();
+    const today = new Date().toDateString();
+    if (stats.lastPlayedDate === today){
+      // bugün zaten oynanmış
+    } else {
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+      stats.streak = (stats.lastPlayedDate === yesterday) ? stats.streak + 1 : 1;
+      stats.lastPlayedDate = today;
+    }
+    saveStats(stats);
+  }
+  function refreshHomeStats(){
+    const stats = loadStats();
+    const lastSize = stats.lastSize || 10;
+    const best = (stats.bestScores && stats.bestScores[String(lastSize)]) || 0;
+    bestScoreLabel.textContent = best;
+    bestScoreSizeLbl.textContent = 'en iyi skor · ' + lastSize + '×' + lastSize;
+    streakLabel.textContent = '🔥 ' + stats.streak;
+  }
+
+  // ============ GERİ AL (REKLAMLI / PREMIUM) ============
+  undoBtn.addEventListener('click', () => {
+    if (gameOver || currentNumber === 0) return;
+    if (settings.premium){
+      performUndo();
+      return;
+    }
+    const wasRunning = gameMode === 'adventure' && timerInterval;
+    if (wasRunning) stopTimer();
+    adModalTitle.textContent = 'reklam izleniyor';
+    adModalText.textContent = 'geri alma hakkın birazdan açılacak...';
+    adModalBg.classList.add('show');
+    // ---- REKLAM ENTEGRASYONU BURAYA ----
+    setTimeout(() => {
+      adModalBg.classList.remove('show');
+      performUndo();
+      if (wasRunning && !gameOver) startTimer();
+    }, 1800);
+  });
+
+  function performUndo(){
+    if (currentNumber === 0) return;
+    const idx = positions[currentNumber];
+    cellValue[idx] = null;
+    positions[currentNumber] = null;
+    currentNumber--;
+    renderAll();
+    soundClick();
+  }
+
+  // ============ SÜRE EKLE (REKLAMLI / PREMIUM) ============
+  addTimeBtn.addEventListener('click', () => {
+    if (gameOver || gameMode !== 'adventure') return;
+    if (settings.premium){
+      timeLeftSec += 30;
+      timerBox.textContent = formatTime(timeLeftSec);
+      if (timeLeftSec > 20) timerBox.classList.remove('warn');
+      soundClick();
+      return;
+    }
+    stopTimer();
+    adModalTitle.textContent = 'reklam izleniyor';
+    adModalText.textContent = '+30 saniye birazdan eklenecek...';
+    adModalBg.classList.add('show');
+    // ---- REKLAM ENTEGRASYONU BURAYA (2. reklam noktası) ----
+    setTimeout(() => {
+      adModalBg.classList.remove('show');
+      timeLeftSec += 30;
+      timerBox.textContent = formatTime(timeLeftSec);
+      if (timeLeftSec > 20) timerBox.classList.remove('warn');
+      if (!gameOver) startTimer();
+    }, 1800);
+  });
+
+  // ============ İPUCU MODU ============
+  hintToggleBtn.addEventListener('click', () => {
+    hintMode = !hintMode;
+    hintToggleBtn.textContent = 'ipuçları: ' + (hintMode ? 'açık' : 'kapalı');
+    renderAll();
+    soundClick();
+  });
+
+  newGameBtn.addEventListener('click', () => {
+    if (currentNumber > 0 && !gameOver){
+      if (!confirm('mevcut oyun kaybolacak. yeniden başlamak istiyor musun?')) return;
+    }
+    resetGame();
+  });
+
+  // ============ AYARLAR MODAL ============
+  function renderSettingsUI(){
+    soundToggle.classList.toggle('on', settings.sound);
+    vibrationToggle.classList.toggle('on', settings.vibration);
+    if (settings.premium){
+      premiumBox.innerHTML = '<div style="text-align:center; color:var(--accent); font-weight:700;">✓ reklamsız sürüm aktif</div><p style="text-align:center; margin-top:6px;">tüm reklamlar kaldırıldı, geri al ve süre ekleme artık ücretsiz ve anında.</p>';
+    }
+  }
+
+  soundToggle.addEventListener('click', () => {
+    settings.sound = !settings.sound;
+    saveSettings();
+    renderSettingsUI();
+    soundClick();
+  });
+  vibrationToggle.addEventListener('click', () => {
+    settings.vibration = !settings.vibration;
+    saveSettings();
+    renderSettingsUI();
+    vibrate(60);
+  });
+
+  buyPremiumBtn.addEventListener('click', () => {
+    // ---- ÖDEME ENTEGRASYONU BURAYA ----
+    // web: Stripe Checkout · mobil mağaza: App Store / Google Play IAP sdk'sı
+    if (confirm('₺49,99 karşılığında reklamsız sürümü satın almak istiyor musun? (bu bir demodur, gerçek ödeme alınmaz)')){
+      settings.premium = true;
+      saveSettings();
+      renderSettingsUI();
+      adBanner.style.display = 'none';
+      homeAdBanner.style.display = 'none';
+      alert('teşekkürler! artık reklamsız oynuyorsun.');
+    }
+  });
+
+  function openSettings(){
+    renderSettingsUI();
+    settingsModalBg.classList.add('show');
+  }
+  homeSettingsBtn.addEventListener('click', openSettings);
+  closeSettingsModal.addEventListener('click', () => settingsModalBg.classList.remove('show'));
+
+  // ============ GEÇMİŞ KAYIT ============
+  const HISTORY_KEY = 'hadigoHistory';
+
+  function loadHistory(){
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e){
+      return [];
+    }
+  }
+
+  function saveHistory(score, won, reason, timeUsed){
+    const list = loadHistory();
+    list.unshift({
+      date: new Date().toISOString(),
+      score: score,
+      completed: won,
+      mode: gameMode,
+      reason: reason,
+      size: SIZE,
+      timeLimit: gameMode === 'adventure' ? timeLimitSec : null,
+      timeUsed: timeUsed,
+      board: cellValue.slice()
+    });
+    const trimmed = list.slice(0, 50);
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+    } catch (e){}
+  }
+
+  function formatDate(iso){
+    const d = new Date(iso);
+    return d.toLocaleDateString('tr-TR', { day:'2-digit', month:'short', year:'numeric' }) +
+      ' ' + d.toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' });
+  }
+
+  function renderHistoryList(){
+    const list = loadHistory();
+    historyList.innerHTML = '';
+    if (list.length === 0){
+      historyList.innerHTML = '<div class="empty-hist">henüz kayıtlı oyun yok.</div>';
+      return;
+    }
+    list.forEach((item) => {
+      const row = document.createElement('div');
+      row.className = 'history-item';
+      const itemSize = item.size || 10;
+      const modeLabel = (item.mode === 'adventure' ? '⏱ macera' : '🎯 klasik') + ' · ' + itemSize + '×' + itemSize;
+      const timeInfo = item.mode === 'adventure' && item.timeUsed !== null
+        ? ' · süre: ' + formatTime(item.timeUsed)
+        : '';
+      row.innerHTML = `
+        <div>
+          <div>${formatDate(item.date)}</div>
+          <div style="color:var(--chalk-dim); margin-top:2px;">skor: ${item.score}${timeInfo}</div>
+          <div class="mode-tag">${modeLabel}</div>
+        </div>
+        <div class="badge ${item.completed ? 'win' : ''}">${item.completed ? 'tamam!' : 'bitti'}</div>
+      `;
+      row.addEventListener('click', () => showDetail(item));
+      historyList.appendChild(row);
+    });
+  }
+
+  function showDetail(item){
+    const itemSize = item.size || 10;
+    detailTitle.textContent = item.completed ? 'tamamlandı 🎉' : 'oyun bitti';
+    const modeLabel = (item.mode === 'adventure' ? 'macera modu' : 'klasik mod') + ' · ' + itemSize + '×' + itemSize;
+    const timeInfo = item.mode === 'adventure' && item.timeUsed !== null
+      ? ' — süre: ' + formatTime(item.timeUsed)
+      : '';
+    detailInfo.textContent = formatDate(item.date) + ' — skor: ' + item.score + ' — ' + modeLabel + timeInfo;
+    detailBoard.innerHTML = '';
+    detailBoard.style.gridTemplateColumns = 'repeat(' + itemSize + ', 1fr)';
+    item.board.forEach(val => {
+      const c = document.createElement('div');
+      c.className = 'mini-cell' + (val !== null ? ' filled' : '');
+      detailBoard.appendChild(c);
+    });
+    detailModalBg.classList.add('show');
+  }
+
+  function openHistory(){
+    renderHistoryList();
+    historyModalBg.classList.add('show');
+  }
+  homeHistoryBtn.addEventListener('click', openHistory);
+  closeHistoryModal.addEventListener('click', () => historyModalBg.classList.remove('show'));
+  closeDetailModal.addEventListener('click', () => detailModalBg.classList.remove('show'));
+
+  // ============ OYUN SONU MODAL + PAYLAŞIM ============
+  function drawBoardImage(){
+    const canvas = document.createElement('canvas');
+    const cell = SIZE <= 5 ? 70 : (SIZE <= 7 ? 56 : 46);
+    const pad = 30;
+    canvas.width = SIZE * cell + pad * 2;
+    canvas.height = SIZE * cell + pad * 2 + 40;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#16281f';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#e8c468';
+    ctx.font = 'bold 26px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('hadigo — tamamladım!', canvas.width / 2, 34);
+
+    for (let i = 0; i < TOTAL; i++){
+      const r = Math.floor(i / SIZE), c = i % SIZE;
+      const x = pad + c * cell, y = pad + 40 + r * cell;
+      const val = cellValue[i];
+      ctx.fillStyle = val !== null ? '#33604d' : 'rgba(255,255,255,0.04)';
+      ctx.fillRect(x, y, cell - 3, cell - 3);
+      if (val !== null){
+        ctx.fillStyle = '#f2ede1';
+        ctx.font = 'bold 13px monospace';
+        ctx.fillText(String(val), x + (cell - 3) / 2, y + (cell - 3) / 2 + 5);
+      }
+    }
+    return canvas.toDataURL('image/png');
+  }
+
+  function showEndModal(won, score, reason, timeUsed){
+    if (won){
+      endTitle.textContent = 'tebrikler! 🎉';
+      endSubtitle.textContent = gameMode === 'adventure'
+        ? 'süresi içinde tamamladın, harikasın!'
+        : 'tahtayı tamamladın, harikasın!';
+    } else if (reason === 'time'){
+      endTitle.textContent = 'süre doldu';
+      endSubtitle.textContent = 'zaman yetmedi, ama bakalım nereye kadar geldin.';
+    } else {
+      endTitle.textContent = 'oyun bitti';
+      endSubtitle.textContent = 'daha fazla ilerleyemedin, ama bakalım skorun.';
+    }
+    endScore.textContent = score;
+    endScoreLabel.textContent = (gameMode === 'adventure' && timeUsed !== null)
+      ? 'skorun bu oldu · süre: ' + formatTime(timeUsed)
+      : 'skorun bu oldu';
+
+    shareRow.innerHTML = '';
+    if (won){
+      const imgData = drawBoardImage();
+
+      const shareBtn = document.createElement('button');
+      shareBtn.className = 'btn accent';
+      shareBtn.textContent = '📤 paylaş';
+      shareBtn.addEventListener('click', async () => {
+        try {
+          const blob = await (await fetch(imgData)).blob();
+          const file = new File([blob], 'hadigo-basari.png', { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })){
+            await navigator.share({
+              files: [file],
+              title: 'hadigo',
+              text: 'hadigo\'da tamamladım! sen de dener misin?'
+            });
+            return;
+          }
+        } catch (e){}
+        const a = document.createElement('a');
+        a.href = imgData;
+        a.download = 'hadigo-basari.png';
+        a.click();
+      });
+      shareRow.appendChild(shareBtn);
+
+      const waBtn = document.createElement('button');
+      waBtn.className = 'btn';
+      waBtn.textContent = 'whatsapp';
+      waBtn.addEventListener('click', () => {
+        const text = encodeURIComponent('hadigo\'da tamamladım! 🎉');
+        window.open('https://wa.me/?text=' + text, '_blank');
+      });
+      shareRow.appendChild(waBtn);
+
+      const twBtn = document.createElement('button');
+      twBtn.className = 'btn';
+      twBtn.textContent = 'x (twitter)';
+      twBtn.addEventListener('click', () => {
+        const text = encodeURIComponent('hadigo\'da tamamladım! 🎉');
+        window.open('https://twitter.com/intent/tweet?text=' + text, '_blank');
+      });
+      shareRow.appendChild(twBtn);
+    }
+
+    endModalBg.classList.add('show');
+  }
+
+  closeEndModal.addEventListener('click', () => endModalBg.classList.remove('show'));
+  playAgainBtn.addEventListener('click', () => {
+    endModalBg.classList.remove('show');
+    resetGame();
+  });
+
+  // ============ BAŞLAT ============
+  if (settings.premium){
+    adBanner.style.display = 'none';
+    homeAdBanner.style.display = 'none';
+  }
+  refreshHomeStats();
+})();
+</script>
+
+</body>
+</html>
