@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>hadigo — sırayı bul, 100'e ulaş</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#16281f">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -1284,6 +1288,13 @@
     endModalBg.classList.remove('show');
     resetGame();
   });
+
+  // ============ SERVICE WORKER KAYDI (PWA gereksinimi) ============
+  if ('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
 
   // ============ BAŞLAT ============
   if (settings.premium){
