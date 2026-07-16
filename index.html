@@ -396,6 +396,49 @@
   .premium-box .price{
     font-size: 1.3rem; font-weight:700; color: var(--accent); margin: 6px 0;
   }
+
+  /* ============ ÖĞRETİCİ (TUTORIAL) ============ */
+  .tut-diagram-wrap{
+    position:relative;
+    max-width: 280px;
+    margin: 14px auto;
+  }
+  .tut-diagram{
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0;
+    background:#0b1712;
+    border-radius: 8px;
+    padding: 0;
+    overflow:hidden;
+  }
+  .tut-arrows{
+    position:absolute;
+    top:0; left:0; width:100%; height:100%;
+    pointer-events:none;
+  }
+  .tut-cell{
+    aspect-ratio:1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid #0b1712;
+    display:flex; align-items:center; justify-content:center;
+    font-size: clamp(0.55rem, 2.6vw, 0.85rem);
+    font-weight:700;
+    color: var(--chalk-dim);
+    transition: background .25s ease, transform .15s ease;
+  }
+  .tut-cell.filled{ background: var(--filled); color: var(--chalk); }
+  .tut-cell.current{ background: var(--current); color:#1b1204; transform: scale(1.08); box-shadow:0 0 8px rgba(232,196,104,0.6); }
+  .tut-cell.invalid{ background: var(--error) !important; color:#fff; animation: shake .5s ease; }
+  .tut-legend{
+    display:flex; flex-direction:column; gap:6px;
+    font-size: 0.72rem; color: var(--chalk-dim);
+    text-align:left; margin-top: 8px;
+  }
+  .tut-legend .row{ display:flex; align-items:center; gap:8px; }
+  .tut-swatch{ width:16px; height:16px; border-radius:4px; flex-shrink:0; }
+  .tut-steps{ text-align:left; font-size:0.8rem; line-height:1.6; margin-top:14px; }
+  .tut-steps b{ color:var(--chalk); }
 </style>
 </head>
 <body>
@@ -408,6 +451,7 @@
   </div>
   <h1 class="home-logo">hadigo</h1>
   <div class="home-tagline">sırayı bul, tahtayı doldur</div>
+  <button class="btn accent" id="homeTutorialBtn" style="margin-bottom:22px; padding:8px 16px;">❓ nasıl oynanır</button>
 
   <div class="home-stats">
     <div class="home-stat">
@@ -497,6 +541,43 @@
       <button class="btn timer-accent" data-min="3">3 dk</button>
       <button class="btn timer-accent" data-min="2">2 dk</button>
     </div>
+  </div>
+</div>
+
+<!-- ÖĞRETİCİ (NASIL OYNANIR) MODAL -->
+<div class="modal-bg" id="tutorialModalBg">
+  <div class="modal" style="position:relative; max-width:420px;">
+    <button class="close-x" id="closeTutorialModal">✕</button>
+    <h2>nasıl oynanır</h2>
+
+    <div class="tut-diagram-wrap">
+      <div class="tut-diagram" id="tutDiagram"></div>
+      <svg class="tut-arrows" id="tutArrows" viewBox="0 0 7 7" preserveAspectRatio="none">
+        <defs>
+          <marker id="tutArrowHead" markerWidth="4" markerHeight="4" refX="2" refY="2" orient="auto">
+            <path d="M0,0 L4,2 L0,4 Z" fill="#e8c468"></path>
+          </marker>
+        </defs>
+        <g id="tutArrowG"></g>
+      </svg>
+    </div>
+
+    <div class="tut-legend">
+      <div class="row"><div class="tut-swatch" style="background:var(--current);"></div> şu an yerleştirilen sayı</div>
+      <div class="row"><div class="tut-swatch" style="background:var(--filled);"></div> önceden yerleştirilmiş sayılar</div>
+      <div class="row"><span style="width:16px; text-align:center;">➜</span> hareketin yönünü gösteren ok</div>
+      <div class="row"><div class="tut-swatch" style="background:var(--error);"></div> kurala uymayan hamle — kırmızı yanar</div>
+    </div>
+
+    <div class="tut-steps">
+      1. Herhangi bir kareye tıkla, oraya <b>1</b> yazılır.<br>
+      2. Sıradaki sayı: <b>yatay/dikey</b> yönde 2 kare atlayarak (3 kare öteye), ya da <b>çapraz</b> yönde 1 kare atlayarak (2 kare öteye) yazılabilir.<br>
+      3. Kurala uymayan bir kareye tıklarsan sayı yazılmaz, kare kısaca kırmızı yanar.<br>
+      4. Tüm tahtayı doldur ya da geçerli hiçbir kare kalmasın — o an oyun biter, ulaştığın en yüksek sayı skorun olur.<br>
+      5. <b>macera modu</b>'nda ayrıca süreyle de yarışırsın.
+    </div>
+
+    <button class="btn accent wide" id="closeTutorialBtn" style="margin-top:16px;">anladım, başlayalım</button>
   </div>
 </div>
 
@@ -653,6 +734,13 @@
   const streakLabel = document.getElementById('streakLabel');
   const homeClassicBtn = document.getElementById('homeClassicBtn');
   const homeAdventureBtn = document.getElementById('homeAdventureBtn');
+  const homeTutorialBtn = document.getElementById('homeTutorialBtn');
+  const tutorialModalBg = document.getElementById('tutorialModalBg');
+  const tutDiagram = document.getElementById('tutDiagram');
+  const tutArrows = document.getElementById('tutArrows');
+  const tutArrowG = document.getElementById('tutArrowG');
+  const closeTutorialModal = document.getElementById('closeTutorialModal');
+  const closeTutorialBtn = document.getElementById('closeTutorialBtn');
   const homeSettingsBtn = document.getElementById('homeSettingsBtn');
   const homeHistoryBtn = document.getElementById('homeHistoryBtn');
   const homeAdBanner = document.getElementById('homeAdBanner');
@@ -1295,6 +1383,132 @@
       navigator.serviceWorker.register('sw.js').catch(() => {});
     });
   }
+
+  // ============ ÖĞRETİCİ (TUTORIAL) — CANLI ANİMASYON ============
+  const TUT_N = 7;
+  // 1'den 10'a kadar, kurallara tam uyan kısa bir örnek yol (tüm tahtayı çözmüyor, sadece hareketi gösteriyor)
+  const TUT_PATH = [[3,3],[3,6],[0,6],[2,4],[2,1],[4,3],[4,0],[1,0],[3,2],[3,5]];
+  // ara: 4. sayı yerleştikten sonra, o an boş olan bitişik bir kareye "yanlış hamle" örneği gösterilir
+  const TUT_INVALID_AFTER_STEP = 4;
+  const TUT_INVALID_CELL = [2, 5]; // 4. sayı [2,4]'e bitişik, henüz boş ve kurala uymuyor
+
+  let tutTimer = null;
+  let tutCells = [];
+
+  function buildTutorialGrid(){
+    tutDiagram.innerHTML = '';
+    tutArrowG.innerHTML = '';
+    tutCells = [];
+    for (let i = 0; i < TUT_N * TUT_N; i++){
+      const cell = document.createElement('div');
+      cell.className = 'tut-cell';
+      tutDiagram.appendChild(cell);
+      tutCells.push(cell);
+    }
+  }
+
+  function tutIdx(r, c){ return r * TUT_N + c; }
+
+  function drawTutArrow(fromRC, toRC){
+    const ns = 'http://www.w3.org/2000/svg';
+    const [r1, c1] = fromRC, [r2, c2] = toRC;
+    const x1 = c1 + 0.5, y1 = r1 + 0.5, x2 = c2 + 0.5, y2 = r2 + 0.5;
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    const shrink = 0.32;
+    const ex = x2 - (dx/len) * shrink;
+    const ey = y2 - (dy/len) * shrink;
+
+    // her adımda sadece SON hareketi göster — önceki ok kaldırılır
+    tutArrowG.innerHTML = '';
+
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    line.setAttribute('stroke', '#e8c468');
+    line.setAttribute('stroke-width', '0.09');
+    line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('marker-end', 'url(#tutArrowHead)');
+    tutArrowG.appendChild(line);
+  }
+
+  function runTutorialAnimation(){
+    let step = 0;
+    let lastCurrentIdx = null;
+    let lastRC = null;
+
+    function clearAll(){
+      tutCells.forEach(c => { c.className = 'tut-cell'; c.textContent = ''; });
+      tutArrowG.innerHTML = '';
+    }
+
+    function placeStep(){
+      if (step >= TUT_PATH.length){
+        // örnek yol bitti — kısa bir bekleme sonrası baştan başla
+        tutTimer = setTimeout(() => {
+          clearAll();
+          step = 0;
+          lastCurrentIdx = null;
+          lastRC = null;
+          placeStep();
+        }, 1300);
+        return;
+      }
+
+      if (lastCurrentIdx !== null){
+        tutCells[lastCurrentIdx].classList.remove('current');
+        tutCells[lastCurrentIdx].classList.add('filled');
+      }
+      const [r, c] = TUT_PATH[step];
+      const idx = tutIdx(r, c);
+      tutCells[idx].classList.add('current');
+      tutCells[idx].textContent = String(step + 1);
+      if (lastRC) drawTutArrow(lastRC, [r, c]);
+      lastCurrentIdx = idx;
+      lastRC = [r, c];
+      step++;
+
+      if (step === TUT_INVALID_AFTER_STEP){
+        // ara: o an boş olan bir kareye "yanlış hamle" örneği göster
+        tutTimer = setTimeout(() => {
+          const wrongCell = tutCells[tutIdx(TUT_INVALID_CELL[0], TUT_INVALID_CELL[1])];
+          wrongCell.classList.add('invalid');
+          tutTimer = setTimeout(() => {
+            wrongCell.classList.remove('invalid');
+            tutTimer = setTimeout(placeStep, 500);
+          }, 550);
+        }, 750);
+      } else {
+        tutTimer = setTimeout(placeStep, 900);
+      }
+    }
+
+    placeStep();
+  }
+
+  function stopTutorialAnimation(){
+    if (tutTimer){ clearTimeout(tutTimer); tutTimer = null; }
+  }
+
+  function openTutorial(){
+    buildTutorialGrid();
+    tutorialModalBg.classList.add('show');
+    runTutorialAnimation();
+  }
+  function closeTutorial(){
+    stopTutorialAnimation();
+    tutorialModalBg.classList.remove('show');
+    try { localStorage.setItem('hadigoTutorialSeen', '1'); } catch(e){}
+  }
+
+  homeTutorialBtn.addEventListener('click', openTutorial);
+  closeTutorialModal.addEventListener('click', closeTutorial);
+  closeTutorialBtn.addEventListener('click', closeTutorial);
+
+  // ilk ziyarette öğreticiyi otomatik göster
+  let tutorialAlreadySeen = false;
+  try { tutorialAlreadySeen = localStorage.getItem('hadigoTutorialSeen') === '1'; } catch(e){}
+  if (!tutorialAlreadySeen) openTutorial();
 
   // ============ BAŞLAT ============
   if (settings.premium){
