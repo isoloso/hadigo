@@ -363,6 +363,108 @@
     display:flex; flex-direction:column; gap:10px;
     width:100%; max-width: 320px;
   }
+  .home-about{
+    width:100%;
+    max-width:760px;
+    margin:42px auto 0;
+    text-align:left;
+  }
+  .home-about-inner{
+    padding:26px 24px;
+    border:1px solid rgba(232,196,104,.22);
+    border-radius:20px;
+    background:linear-gradient(145deg, rgba(15,30,23,.94), rgba(18,38,28,.82));
+    box-shadow:0 14px 40px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.035);
+  }
+  .home-about-kicker{
+    display:inline-block;
+    color:var(--accent);
+    font-size:.65rem;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    margin-bottom:7px;
+  }
+  .home-about h2{
+    margin:0 0 9px;
+    color:var(--chalk);
+    font-family:'Caveat',cursive;
+    font-size:clamp(2rem,6vw,2.7rem);
+    line-height:1;
+  }
+  .home-about-lead{
+    margin:0;
+    color:var(--chalk-dim);
+    font-size:.78rem;
+    line-height:1.7;
+  }
+  .home-about-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    margin-top:20px;
+  }
+  .home-about-grid article{
+    padding:15px;
+    border:1px solid #294536;
+    border-radius:13px;
+    background:rgba(255,255,255,.025);
+  }
+  .home-about-grid article>span{
+    font-size:1.25rem;
+  }
+  .home-about-grid h3{
+    margin:7px 0 5px;
+    color:var(--chalk);
+    font-size:.78rem;
+  }
+  .home-about-grid p{
+    margin:0;
+    color:var(--chalk-dim);
+    font-size:.68rem;
+    line-height:1.55;
+  }
+  .home-about-bottom{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    margin-top:18px;
+    padding-top:16px;
+    border-top:1px solid #223a2c;
+  }
+  .home-about-bottom>div{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+  .home-about-bottom strong{
+    color:var(--chalk);
+    font-size:.72rem;
+  }
+  .home-about-bottom span{
+    color:var(--chalk-dim);
+    font-size:.62rem;
+  }
+  .home-about-bottom nav{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+  .home-about-bottom a{
+    color:var(--accent);
+    font-size:.62rem;
+    text-decoration:none;
+  }
+  .home-about-bottom a:hover{text-decoration:underline;}
+  @media (max-width:650px){
+    .home-about{margin-top:30px;}
+    .home-about-inner{padding:21px 17px;}
+    .home-about-grid{grid-template-columns:1fr;}
+    .home-about-bottom{align-items:flex-start;flex-direction:column;}
+    .home-about-bottom nav{justify-content:flex-start;}
+  }
+
   .home-buttons .btn{
     padding: 15px 18px;
     font-size: 0.95rem;
@@ -480,10 +582,50 @@
   <div class="adbox" id="homeAdBanner" style="margin-top:26px; max-width:320px;">
     reklam alanı — buraya google adsense banner kodu eklenecek
   </div>
+  <section id="about-hadigo" class="home-about">
+    <div class="home-about-inner">
+      <span class="home-about-kicker">hadigo hakkında</span>
+      <h2>100'e ulaşabilecek misin?</h2>
+      <p class="home-about-lead">
+        hadigo; dikkat, hafıza ve stratejiyi bir araya getiren hızlı bir sayı bulmacası.
+        Sayıları doğru sırayla yerleştir, hamlelerini önceden düşün ve tahtayı tamamlamaya çalış.
+      </p>
+
+      <div class="home-about-grid">
+        <article>
+          <span>🎯</span>
+          <h3>Nasıl oynanır?</h3>
+          <p>Bir kareye tıklayarak 1'den başla. Her yeni sayı için oyunun hareket kurallarına uygun boş bir kare bul.</p>
+        </article>
+        <article>
+          <span>🧠</span>
+          <h3>Strateji kur</h3>
+          <p>Her hamle sonraki hamleni etkiler. Sadece şu anı değil, birkaç hamle sonrasını da düşün.</p>
+        </article>
+        <article>
+          <span>🏆</span>
+          <h3>Skorunu geliştir</h3>
+          <p>Farklı tahta boyutlarını dene, ipuçlarını kullan ve kendi en iyi skorunu geçmeye çalış.</p>
+        </article>
+      </div>
+
+      <div class="home-about-bottom">
+        <div>
+          <strong>Her yerde oyna</strong>
+          <span>Telefon, tablet ve bilgisayarda tarayıcıdan doğrudan.</span>
+        </div>
+        <nav>
+          <a href="privacy.html">Gizlilik</a>
+          <a href="support.html">Destek</a>
+          <a href="terms.html">Kullanım Şartları</a>
+        </nav>
+      </div>
+    </div>
+  </section>
+
 </div>
 
-<!-- ============ TAHTA BOYUTU SEÇİM MODAL ============ -->
-<div class="modal-bg" id="sizeModalBg">
+<!-- ============ TAHTA BOYUTU SEÇİM MODAL ============ --><div class="modal-bg" id="sizeModalBg">
   <div class="modal">
     <h2>tahtanı seç</h2>
     <p>ne kadar sürede oynamak istersin?</p>
@@ -1528,34 +1670,7 @@
 </script>
 
 
-<section id="about-hadigo" style="max-width:720px;margin:40px auto 24px;padding:24px 20px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:rgba(255,255,255,.035);color:inherit;line-height:1.65;">
-  <h2 style="margin-top:0;">hadigo nedir?</h2>
-  <p>hadigo, sayıların doğru sırasını bulmaya çalıştığın, dikkat ve strateji gerektiren bir sayı bulmacasıdır. Amaç, verilen oyun alanında hamlelerini planlayarak sırayı tamamlamak ve 100'e ulaşmaktır.</p>
 
-  <h2>Nasıl oynanır?</h2>
-  <p>Tahtadaki sayıları takip et, mümkün olan hamleleri değerlendir ve bir sonraki sayıya ulaşacak yolu bul. İlerledikçe oyun daha fazla dikkat ve planlama gerektirir.</p>
-
-  <h2>Hadigo'nun özellikleri</h2>
-  <ul>
-    <li>Tarayıcıdan doğrudan oynanabilen hızlı oyun deneyimi</li>
-    <li>Farklı oyun alanları ve zorluk seçenekleri</li>
-    <li>Skor ve oyun geçmişi takibi</li>
-    <li>İpuçlarıyla strateji geliştirme</li>
-    <li>Telefon, tablet ve bilgisayarda oynanabilir</li>
-  </ul>
-
-  <h2>Google Play</h2>
-  <p>hadigo'nun Android sürümü hazırlanıyor. Google Play'de yayınlandığında resmi indirme bağlantısını bu sayfaya ekleyeceğiz.</p>
-
-  <h2>Destek ve iletişim</h2>
-  <p>Bir hata ile karşılaşırsan veya önerin varsa <a href="mailto:hadigogame@gmail.com">hadigogame@gmail.com</a> adresinden bize ulaşabilirsin.</p>
-
-  <nav style="display:flex;gap:14px;flex-wrap:wrap;margin-top:22px;">
-    <a href="privacy.html">Gizlilik Politikası</a>
-    <a href="support.html">Destek</a>
-    <a href="terms.html">Kullanım Şartları</a>
-  </nav>
-</section>
 
 </body>
 </html>
